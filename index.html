@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Raid Report Card</title>
+  <style>
+  .Warrior {color: #C79C6E; font-weight: bold}
+  .Warlock {color: #9482C9; font-weight: bold}
+  .Shaman {color: #0070DE; font-weight: bold}
+  .Rogue {color: #FFF569; font-weight: bold}
+  .Priest {color: #000000; font-weight: bold}
+  .Paladin {color: #F58CBA; font-weight: bold}
+  .Mage {color: #69CCF0; font-weight: bold}
+  .Hunter {color: #ABD473; font-weight: bold}
+  .Druid {color: #FF7D0A; font-weight: bold}
+  </style>
+</head>
+<body>
+  <form id='form'>
+    <label for='reportid'>WCL Report Id:</label><br>
+    <input type='text' id='reportid' name='reportid' placeholder='TKrgqcmX9yY7zfbQ'>
+    <br>
+    <br>
+    <label for='apikey'>WCL API Key:</label><br>
+    <input type='text' id='apikey' name='apikey' placeholder='3950yourkeyfromwclhere0323c'>
+    <br>
+    <br>
+    <input type='submit' value='Submit'>
+  </form>
+  <table width="900px" id='reporttable'>
+    <thead><tr id='reporttableheaderrow'></tr></thead>
+    <tbody id='reporttablebody'></tbody>
+  </table>
+  <ul id='friendlies'></ul>
+  <script>
+  function fetchWorldBuffs(reportId, sourceId, fightIds, apiKey) {
+    const url = 'https://classic.warcraftlogs.com:443/v1/report/events/summary/'
+    + reportId + '?end=10000000000&sourceid=' + sourceId
+    + '&filter=type%3D%22combatantinfo%22'
+    + '&api_key=' + apiKey;
+    fetch(url).then(function(response) {
+      return response.json();
+    }).then(function(json) {
+      json['events'].forEach(function(event) {
+        if (fightIds.includes(event['fight'])) {
+          var cell = document.createElement('td');
+          var imgs = document.createElement('div');
+          var buffs = [
+            15123, // resist fire
+            16609, // wcb
+            15366, // sf
+            22818, // moxie
+            22817, // ferocity
+            22820, // savy
+            24425, // zandalar
+            22888, // dragonslayer
+            23768 // dmf
+          ];
+          buffs.forEach(function(buff) {
+            var img = document.createElement('img');
+            img.id = sourceId + '-' + buff + '-' + event['fight'];
+            img.height = 30;
+            img.width = 30;
+            imgs.appendChild(img);
+          });
+          cell.appendChild(imgs);
+          document.getElementById(sourceId).appendChild(cell);
+          event['auras'].forEach(function(aura) {
+            if (buffs.includes(aura['ability'])) {
+              var elid = sourceId + '-' + aura['ability'] + '-' + event['fight'];
+              document.getElementById(elid).src = 'https://dmszsuqyoe6y6.cloudfront.net/img/warcraft/abilities/' + aura['icon'];
+            }
+          });
+        }
+      });
+    }).catch(function(error) {
+
+    });
+  }
+  function fetchRaidBuffs(reportId, apiKey) {
+    const url = 'https://classic.warcraftlogs.com:443/v1/report/fights/'
+    + reportId + '?api_key=' + apiKey;
+    fetch(url).then(function(response) {
+      return response.json();
+    }).then(function(json) {
+      var empty = document.createElement('th');
+      document.getElementById('reporttableheaderrow').appendChild(empty);
+      var bossFights = [];
+      json['fights'].forEach(function(fight) {
+        const bwl = [610, 611, 612, 613, 614, 615, 616, 617];
+        if (fight['boss'] > 0 && bwl.includes(fight['boss'])) {
+          if (fight['partial'] == 2) {
+            bossFights.push(fight['id']-1);
+          } else {
+            bossFights.push(fight['id']);
+          }
+          var text = document.createTextNode(fight['name']);
+          var header = document.createElement('th');
+          header.appendChild(text);
+          document.getElementById('reporttableheaderrow').appendChild(header);
+        }
+      });
+      json['friendlies'].forEach(function(friendly) {
+        var matches = 0;
+        friendly['fights'].forEach(function(fight) {
+          if (bossFights.includes(fight['id'])) {
+            matches += 1;
+          }
+        });
+        if (matches > 2) {
+          var node = document.createElement('td');
+          node.className = friendly['type'];
+          var text = document.createTextNode(friendly['name']);
+          node.appendChild(text);
+          var row = document.createElement('tr');
+          row.id = friendly['id'];
+          row.appendChild(node);
+          document.getElementById('reporttablebody').appendChild(row);
+          fetchWorldBuffs(reportId, friendly['id'], bossFights, apiKey);
+        }
+      });
+    }).catch(function(error) {
+      console.log(error);
+    });
+  }
+  function update() {
+    const reportId = document.getElementById('reportid').value;
+    const apiKey = document.getElementById('apikey').value;
+    fetchRaidBuffs(reportId, apiKey);
+    return false;
+  }
+  function init() {
+    document.getElementById('form').onsubmit = update;
+  }
+  window.onload = init;
+  </script>
+</body>
+</html>
