@@ -29,7 +29,7 @@
   <br>
   <div id='errormessage'></div>
   <br>
-  <table width="900px" id='reporttable'>
+  <table width="400px" id='reporttable'>
     <thead><tr id='reporttableheaderrow'></tr></thead>
     <tbody id='reporttablebody'></tbody>
   </table>
@@ -66,15 +66,17 @@
           buffs.forEach(function(buff) {
             var img = document.createElement('img');
             img.id = sourceId + '-' + buff + '-' + event['fight'];
-            img.height = 30;
-            img.width = 30;
+            img.height = 16;
+            img.width = 16;
             imgs.appendChild(img);
           });
           cell.appendChild(imgs);
           event['auras'].forEach(function(aura) {
             if (buffs.includes(aura['ability'])) {
               var elid = sourceId + '-' + aura['ability'] + '-' + event['fight'];
-              document.getElementById(elid).src = 'https://dmszsuqyoe6y6.cloudfront.net/img/warcraft/abilities/' + aura['icon'];
+              var el = document.getElementById(elid)
+              el.src = 'https://dmszsuqyoe6y6.cloudfront.net/img/warcraft/abilities/' + aura['icon'];
+              el.title = aura['name'];
             }
           });
         }
@@ -97,18 +99,26 @@
       var empty = document.createElement('th');
       document.getElementById('reporttableheaderrow').appendChild(empty);
       var bossFights = [];
+      const bwl = [610, 611, 612, 613, 614, 615, 616, 617];
+      bwl.forEach(function(bossId) {
+        var img = document.createElement('img');
+        img.id = 'boss-' + bossId;
+        img.src = 'https://dmszsuqyoe6y6.cloudfront.net/img/warcraft/bosses/' + bossId +'-icon.jpg';
+        img.width = 48;
+        img.height = 48;
+        var header = document.createElement('th');
+        header.appendChild(img);
+        document.getElementById('reporttableheaderrow').appendChild(header);
+      });
       json['fights'].forEach(function(fight) {
-        const bwl = [610, 611, 612, 613, 614, 615, 616, 617];
         if (fight['boss'] > 0 && bwl.includes(fight['boss'])) {
           if (fight['partial'] == 2) {
             bossFights.push(fight['id']-1);
           } else {
             bossFights.push(fight['id']);
           }
-          var text = document.createTextNode(fight['name']);
-          var header = document.createElement('th');
-          header.appendChild(text);
-          document.getElementById('reporttableheaderrow').appendChild(header);
+          var el = document.getElementById('boss-' + fight['boss']);
+          el.title = fight['name'];
         }
       });
       json['friendlies'].forEach(function(friendly) {
