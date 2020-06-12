@@ -26,6 +26,9 @@
     <br>
     <input type='submit' value='Submit'>
   </form>
+  <br>
+  <div id='errormessage'></div>
+  <br>
   <table width="900px" id='reporttable'>
     <thead><tr id='reporttableheaderrow'></tr></thead>
     <tbody id='reporttablebody'></tbody>
@@ -40,9 +43,14 @@
     fetch(url).then(function(response) {
       return response.json();
     }).then(function(json) {
+      fightIds.forEach(function(fightId) {
+        var cell = document.createElement('td');
+        cell.id = sourceId + '-' + fightId;
+        document.getElementById(sourceId).appendChild(cell);
+      });
       json['events'].forEach(function(event) {
         if (fightIds.includes(event['fight'])) {
-          var cell = document.createElement('td');
+          var cell = document.getElementById(sourceId + '-' + event['fight']);
           var imgs = document.createElement('div');
           var buffs = [
             15123, // resist fire
@@ -63,7 +71,6 @@
             imgs.appendChild(img);
           });
           cell.appendChild(imgs);
-          document.getElementById(sourceId).appendChild(cell);
           event['auras'].forEach(function(aura) {
             if (buffs.includes(aura['ability'])) {
               var elid = sourceId + '-' + aura['ability'] + '-' + event['fight'];
@@ -82,6 +89,11 @@
     fetch(url).then(function(response) {
       return response.json();
     }).then(function(json) {
+      if (json['error']) {
+        var msg = document.createTextNode(json['error']);
+        document.getElementById('errormessage').appendChild(msg);
+        return;
+      }
       var empty = document.createElement('th');
       document.getElementById('reporttableheaderrow').appendChild(empty);
       var bossFights = [];
@@ -129,6 +141,12 @@
     return false;
   }
   function init() {
+    var url = new URL(document.location.href);
+    var reportId = url.searchParams.get('reportid');
+    var apiKey = url.searchParams.get('apikey');
+    if (reportId && apiKey) {
+      fetchRaidBuffs(reportId, apiKey);
+    }
     document.getElementById('form').onsubmit = update;
   }
   window.onload = init;
