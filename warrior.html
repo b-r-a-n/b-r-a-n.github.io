@@ -34,6 +34,7 @@
       <tr id='result-header-row'>
         <td>Player</td><td>Damage</td><td>Miss Rate</td><td>Crit Rate</td>
         <td>Parry Rate</td><td>Bloodthirsts</td><td>Sunders</td><td>Heroic Strikes</td>
+        <td>Executes</td>
       </tr>
     </thead>
     <tbody id='result-table-body'></tbody>
@@ -79,6 +80,9 @@
     tr.appendChild(td);
     var td = document.createElement('td');
     td.appendChild(document.createTextNode(formatNumber(summary.heroicStrikes)));
+    tr.appendChild(td);
+    var td = document.createElement('td');
+    td.appendChild(document.createTextNode(formatNumber(summary.executes)));
     tr.appendChild(td);
     return tr;
   }
