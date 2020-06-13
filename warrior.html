@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Warrior Report Card</title>
+  <style>
+  .Warrior {color: #C79C6E; font-weight: bold}
+  .Warlock {color: #9482C9; font-weight: bold}
+  .Shaman {color: #0070DE; font-weight: bold}
+  .Rogue {color: #FFF569; font-weight: bold}
+  .Priest {color: #000000; font-weight: bold}
+  .Paladin {color: #F58CBA; font-weight: bold}
+  .Mage {color: #69CCF0; font-weight: bold}
+  .Hunter {color: #ABD473; font-weight: bold}
+  .Druid {color: #FF7D0A; font-weight: bold}
+  </style>
+</head>
+<body>
+  <form id='form'>
+    <label for='reportid'>WCL Report Id:</label><br>
+    <input type='text' id='reportid' name='reportid' placeholder='TKrgqcmX9yY7zfbQ'>
+    <br>
+    <br>
+    <label for='apikey'>WCL API Key:</label><br>
+    <input type='text' id='apikey' name='apikey' placeholder='3950yourkeyfromwclhere0323c'>
+    <br>
+    <br>
+    <input type='submit' value='Submit'>
+  </form>
+  <br>
+  <div id='errormessage'></div>
+  <br>
+  <ul id='warrior-list'></ul>
+  <script>
+  function formatNumber(num) {
+    return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
+  }
+  function createWarriorElement(warrior) {
+    var el = document.createElement('li');
+    el.id = 'warrior-' + warrior['id'];
+    el.appendChild(document.createTextNode(warrior['name']));
+    return el;
+  }
+  function fetchWarriors(reportId, apiKey) {
+    const bosses = ['Razorgore the Untamed', 'Vaelastrasz the Corrupt', 'Broodlord Lashlayer', 'Firemaw', 'Ebonroc', 'Flamegor', 'Chromaggus', 'Nefarian'];
+    var warriors = [];
+    var counter = 0;
+    var url = 'https://classic.warcraftlogs.com:443/v1/report/fights/'
+    + reportId + '?api_key=' + apiKey;
+    fetch(url).then(function(response){
+      return response.json();
+    }).then(function(data){
+      data['friendlies'].forEach(function(friendly) {
+        if (friendly['type'] == 'Warrior') {
+          var el = createWarriorElement(friendly);
+          document.getElementById('warrior-list').appendChild(el);
+          bosses.forEach(function(boss) {
+            counter += 1;
+            fetchCombatStats(reportId, friendly['id'], boss, apiKey, function(stats) {
+              warriors.push([friendly['name']].concat(stats));
+              counter -= 1;
+              if (counter == 0) {
+                var damageTotals = {};
+                warriors.forEach(function(warrior) {
+                  console.log(warrior);
+                  if (!damageTotals[warrior[2]]) {
+                    damageTotals[warrior[2]] = [0, 0, 0];
+                  }
+                  damageTotals[warrior[2]][0] += (warrior[3] || 0);
+                  damageTotals[warrior[2]][1] += (warrior[4] || 0);
+                  damageTotals[warrior[2]][2] += (warrior[5] || 0);
+                });
+                console.log(damageTotals);
+                Object.keys(damageTotals).forEach(function(k) {
+                  var li = document.getElementById('warrior-' + k);
+                  var totals = damageTotals[k];
+                  var damageDone = totals[0];
+                  var missRate = totals[1]/totals[2];
+                  li.appendChild(document.createTextNode(
+                      ' damage: ' + formatNumber(damageDone)
+                      + ' miss rate: ' + (missRate*100).toPrecision(3)
+                  ));
+                });
+              }
+            });
+          });
+        }
+      });
+    }).catch(function(error) {
+      console.log(error);
+    });
+  }
+  function totalDamage(entries) {
+    var total = 0;
+    entries.forEach(function(entry) {
+      total += entry['total'];
+    });
+    return total;
+  }
+  function missPercent(entries) {
+    var total = 0;
+    var misses = 0;
+    entries.forEach(function(entry) {
+      if (entry['name'] == 'Melee') {
+        total += entry['hitCount'] + entry['missCount'];
+        entry['missdetails'].forEach(function(miss) {
+          if (miss['type'] == 'Miss') {
+            misses += miss['count'];
+          }
+        });
+      }
+    });
+    if (total < 1) { return 0; }
+    return [misses, total];
+  }
+  function fetchCombatStats(reportId, sourceId, targetName, apiKey, fn) {
+    var url = 'https://classic.warcraftlogs.com:443/v1/report/tables/damage-done/'
+    + reportId + '?end=1000000000000&sourceid=' + sourceId
+    + '&filter=' + encodeURIComponent('target.name="'+ targetName + '"')
+    + '&api_key=' + apiKey;
+    fetch(url).then(function(response) {
+      return response.json();
+    }).then(function(json) {
+      var total = totalDamage(json['entries']);
+      var miss = missPercent(json['entries']);
+      return [targetName, sourceId, total].concat(miss);
+    }).then(fn).catch(function(error) {
+      console.log(error);
+    });
+  }
+  function update() {
+    const reportId = document.getElementById('reportid').value;
+    const apiKey = document.getElementById('apikey').value;
+    fetchWarriors(reportId, apiKey);
+    return false;
+  }
+  function init() {
+    var url = new URL(document.location.href);
+    var reportId = url.searchParams.get('reportid');
+    var apiKey = url.searchParams.get('apikey');
+    if (reportId && apiKey) {
+      fetchWarriors(reportId, apiKey);
+    }
+    document.getElementById('form').onsubmit = update;
+  }
+  window.onload = init;
+  </script>
+</body>
+</html>
