@@ -33,79 +33,54 @@
     <thead>
       <tr id='result-header-row'>
         <td>Player</td><td>Damage</td><td>Miss Rate</td><td>Crit Rate</td>
+        <td>Parry Rate</td><td>Bloodthirsts</td><td>Sunders</td><td>Heroic Strikes</td>
       </tr>
     </thead>
     <tbody id='result-table-body'></tbody>
   </table>
   <ul id='warrior-list'></ul>
   <script>
+  Storage.prototype.setObject = function(key, value) {
+    this.setItem(key, JSON.stringify(value));
+  }
+  Storage.prototype.getObject = function(key) {
+    var value = this.getItem(key);
+    return value && JSON.parse(value);
+  }
   function formatNumber(num) {
     return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
   }
-  function createWarriorElement(warrior) {
-    var el = document.createElement('tr');
-    el.id = 'warrior-' + warrior['id'];
+  function createWarriorElement(summary) {
+    var tr = document.createElement('tr');
+    tr.id = 'warrior-' + summary.name;
     var td = document.createElement('td');
-    td.appendChild(document.createTextNode(warrior['name']));
-    el.appendChild(td);
-    return el;
-  }
-  function fetchWarriors(reportId, apiKey) {
-    const bosses = ['Razorgore the Untamed', 'Vaelastrasz the Corrupt', 'Broodlord Lashlayer', 'Firemaw', 'Ebonroc', 'Flamegor', 'Chromaggus', 'Nefarian'];
-    var warriors = [];
-    var counter = 0;
-    var url = 'https://classic.warcraftlogs.com:443/v1/report/fights/'
-    + reportId + '?api_key=' + apiKey;
-    fetch(url).then(function(response){
-      return response.json();
-    }).then(function(data){
-      data['friendlies'].forEach(function(friendly) {
-        if (friendly['type'] == 'Warrior') {
-          var el = createWarriorElement(friendly);
-          document.getElementById('result-table-body').appendChild(el);
-          bosses.forEach(function(boss) {
-            counter += 1;
-            fetchCombatStats(reportId, friendly['id'], boss, apiKey, function(stats) {
-              warriors.push([friendly['name']].concat(stats));
-              counter -= 1;
-              if (counter == 0) {
-                var damageTotals = {};
-                warriors.forEach(function(warrior) {
-                  console.log(warrior);
-                  if (!damageTotals[warrior[2]]) {
-                    damageTotals[warrior[2]] = [0, 0, 0, 0, 0];
-                  }
-                  damageTotals[warrior[2]][0] += (warrior[3] || 0);
-                  damageTotals[warrior[2]][1] += (warrior[4] || 0);
-                  damageTotals[warrior[2]][2] += (warrior[5] || 0);
-                  damageTotals[warrior[2]][3] += (warrior[6] || 0);
-                  damageTotals[warrior[2]][4] += (warrior[7] || 0);
-                });
-                console.log(damageTotals);
-                Object.keys(damageTotals).forEach(function(k) {
-                  var tr = document.getElementById('warrior-' + k);
-                  var totals = damageTotals[k];
-                  var damageDone = totals[0];
-                  var td = document.createElement('td');
-                  td.appendChild(document.createTextNode(formatNumber(damageDone)));
-                  tr.appendChild(td);
-                  var missRate = totals[1]/totals[2];
-                  var td = document.createElement('td');
-                  td.appendChild(document.createTextNode((missRate*100).toPrecision(3)));
-                  tr.appendChild(td);
-                  var critRate = totals[3]/totals[4];
-                  var td = document.createElement('td');
-                  td.appendChild(document.createTextNode((critRate*100).toPrecision(3)));
-                  tr.appendChild(td);
-                });
-              }
-            });
-          });
-        }
-      });
-    }).catch(function(error) {
-      console.log(error);
-    });
+    td.appendChild(document.createTextNode(summary.name));
+    tr.appendChild(td);
+    var td = document.createElement('td');
+    td.appendChild(document.createTextNode(formatNumber(summary.totalDamage)));
+    tr.appendChild(td);
+    var missRate = summary.meleeMisses / summary.meleeAttempts;
+    var td = document.createElement('td');
+    td.appendChild(document.createTextNode((missRate*100).toPrecision(3)));
+    tr.appendChild(td);
+    var critRate = summary.critHits / summary.totalAttacks;
+    var td = document.createElement('td');
+    td.appendChild(document.createTextNode((critRate*100).toPrecision(3)));
+    tr.appendChild(td);
+    var parryRate = summary.totalParries / summary.totalAttacks;
+    var td = document.createElement('td');
+    td.appendChild(document.createTextNode((parryRate*100).toPrecision(3)));
+    tr.appendChild(td);
+    var td = document.createElement('td');
+    td.appendChild(document.createTextNode(formatNumber(summary.bloodThirsts)));
+    tr.appendChild(td);
+    var td = document.createElement('td');
+    td.appendChild(document.createTextNode(formatNumber(summary.sunders)));
+    tr.appendChild(td);
+    var td = document.createElement('td');
+    td.appendChild(document.createTextNode(formatNumber(summary.heroicStrikes)));
+    tr.appendChild(td);
+    return tr;
   }
   function totalDamage(entries) {
     var total = 0;
@@ -127,8 +102,17 @@
         });
       }
     });
-    if (total < 1) { return 0; }
+    if (total < 1) { return [0, 0]; }
     return [misses, total];
+  }
+  function countExecutes(entries) {
+    var total = 0;
+    entries.forEach(function(entry) {
+      if (entry['name'] == 'Execute') {
+        total += entry['hitCount'] + entry['missCount'];
+      }
+    });
+    return total;
   }
   function critPercent(entries) {
     var crits = 0;
@@ -139,22 +123,157 @@
     });
     return [crits, total];
   }
-  function fetchCombatStats(reportId, sourceId, targetName, apiKey, fn) {
+  function parryPercent(entries) {
+    var parries = 0;
+    var total = 0;
+    entries.forEach(function(entry) {
+      total += entry['hitCount'] + entry['missCount'];
+      entry['missdetails'].forEach(function(miss) {
+        if (miss['type'] == 'Parry') {
+          parries += miss['count'];
+        }
+      });
+    });
+    return [parries, total];
+  }
+  function castCounts(entries) {
+    var result = {};
+    entries.forEach(function(entry) {
+      if (!result[entry['name']]) {
+        result[entry['name']] = 0;
+      }
+      result[entry['name']] += entry['total'];
+    });
+    return result;
+  }
+  function fetchCasts(reportId, apiKey, sourceId, targetName) {
+    var url = 'https://classic.warcraftlogs.com:443/v1/report/tables/casts/'
+    + reportId + '?end=1000000000000&sourceid=' + sourceId
+    + '&filter=' + encodeURIComponent('target.name="'+ targetName + '"')
+    + '&api_key=' + apiKey;
+    return fetch(url).then(function(response) {
+      return response.json();
+    }).then(function(json) {
+      var casts = castCounts(json['entries']);
+      casts['type'] = 'casts';
+      casts['targetName'] = targetName;
+      casts['sourceId'] = sourceId;
+      return casts;
+    });
+  }
+  function fetchDamageDone(reportId, apiKey, sourceId, targetName) {
     var url = 'https://classic.warcraftlogs.com:443/v1/report/tables/damage-done/'
     + reportId + '?end=1000000000000&sourceid=' + sourceId
     + '&filter=' + encodeURIComponent('target.name="'+ targetName + '"')
     + '&api_key=' + apiKey;
-    fetch(url).then(function(response) {
+    return fetch(url).then(function(response) {
       return response.json();
     }).then(function(json) {
       var total = totalDamage(json['entries']);
       var miss = missPercent(json['entries']);
       var crit = critPercent(json['entries']);
-      var result = [targetName, sourceId, total].concat(miss).concat(crit);
-      return result;
-    }).then(fn).catch(function(error) {
-      console.log(error);
+      var parry = parryPercent(json['entries']);
+      var executes = countExecutes(json['entries']);
+      return {
+        'type': 'damage-done',
+        'targetName': targetName,
+        'sourceId': sourceId,
+        'totalDamage': total,
+        'meleeMisses': miss[0],
+        'meleeAttempts': miss[1],
+        'critHits': crit[0],
+        'totalAttacks': crit[1],
+        'totalParries': parry[0],
+        'executes': executes,
+      }
     });
+  }
+  function fetchWarriors(reportId, apiKey) {
+    var url = 'https://classic.warcraftlogs.com:443/v1/report/fights/'
+    + reportId + '?api_key=' + apiKey;
+    return fetch(url).then(response => {
+      return response.json()
+    }).then(json => {
+      var warriors = [];
+      json['friendlies'].forEach(function(friendly) {
+        if (friendly['type'] == 'Warrior') {
+          warriors.push(friendly);
+        }
+      });
+      return warriors;
+    });
+  }
+  function fetchReport(reportId, apiKey) {
+    const bosses = ['Razorgore the Untamed', 'Vaelastrasz the Corrupt', 'Broodlord Lashlayer', 'Firemaw', 'Ebonroc', 'Flamegor', 'Chromaggus', 'Nefarian'];
+    return fetchWarriors(reportId, apiKey).then(warriors => {
+      var requests = [];
+      warriors.forEach(warrior => {
+        bosses.forEach(boss => {
+          const dmg = fetchDamageDone(reportId, apiKey, warrior['id'], boss).then(v => {
+            v['sourceName'] = warrior['name'];
+            return v;
+          });
+          requests.push(dmg);
+          const cst = fetchCasts(reportId, apiKey, warrior['id'], boss).then(v => {
+            v['sourceName'] = warrior['name'];
+            return v;
+          });
+          requests.push(cst);
+        });
+      });
+      return Promise.all(requests).then(values => {
+        return values;
+      });
+    });
+  }
+  function getReport(reportId, apiKey) {
+    const result = new Promise((resolve, reject) => {
+      var report = localStorage.getObject(reportId);
+      if (!report) {
+        console.log('Fetching remote report');
+        fetchReport(reportId, apiKey).then(report => {
+          localStorage.removeItem(reportId);
+          localStorage.setObject(reportId, report);
+          resolve(report);
+        });
+      } else {
+        console.log('Returning local report');
+        resolve(report);
+      }
+    });
+    return result;
+  }
+  function summarize(report) {
+    var summary = {};
+    report.forEach(row => {
+      const key = row['sourceName'];
+      if (!summary[key]) {
+        summary[key] = {
+          'name': key,
+          'totalDamage': 0,
+          'meleeMisses': 0,
+          'meleeAttempts': 0,
+          'totalParries': 0,
+          'totalAttacks': 0,
+          'critHits': 0,
+          'sunders': 0,
+          'bloodThirsts': 0,
+          'executes': 0,
+          'heroicStrikes': 0,
+        };
+      }
+      summary[key].totalDamage += (row.totalDamage || 0);
+      summary[key].meleeMisses += (row.meleeMisses || 0);
+      summary[key].meleeAttempts += (row.meleeAttempts || 0);
+      summary[key].totalParries += (row.totalParries || 0);
+      summary[key].totalAttacks += (row.totalAttacks || 0);
+      summary[key].critHits += (row.critHits || 0);
+      summary[key].sunders += (row['Sunder Armor'] || 0);
+      summary[key].bloodThirsts += (row['Bloodthirst'] || 0);
+      summary[key].executes += (row['executes'] || 0);
+      summary[key].heroicStrikes += (row['Heroic Strike'] || 0);
+    });
+    return Object.values(summary);
   }
   function update() {
     const reportId = document.getElementById('reportid').value;
@@ -167,7 +286,17 @@
     var reportId = url.searchParams.get('reportid');
     var apiKey = url.searchParams.get('apikey');
     if (reportId && apiKey) {
-      fetchWarriors(reportId, apiKey);
+      getReport(reportId, apiKey).then(report => {
+        const summary = summarize(report).sort((a,b) => {
+          if (a.totalDamage < b.totalDamage) { return -1; }
+          if (a.totalDamage > b.totalDamage) { return 1; }
+          return 0;
+        });
+        summary.forEach(row => {
+          var el = createWarriorElement(row);
+          document.getElementById('result-table-body').appendChild(el);
+        });
+      });
     }
     document.getElementById('form').onsubmit = update;
   }
