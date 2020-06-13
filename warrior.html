@@ -29,15 +29,25 @@
   <br>
   <div id='errormessage'></div>
   <br>
+  <table>
+    <thead>
+      <tr id='result-header-row'>
+        <td>Player</td><td>Damage</td><td>Miss Rate</td><td>Crit Rate</td>
+      </tr>
+    </thead>
+    <tbody id='result-table-body'></tbody>
+  </table>
   <ul id='warrior-list'></ul>
   <script>
   function formatNumber(num) {
     return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
   }
   function createWarriorElement(warrior) {
-    var el = document.createElement('li');
+    var el = document.createElement('tr');
     el.id = 'warrior-' + warrior['id'];
-    el.appendChild(document.createTextNode(warrior['name']));
+    var td = document.createElement('td');
+    td.appendChild(document.createTextNode(warrior['name']));
+    el.appendChild(td);
     return el;
   }
   function fetchWarriors(reportId, apiKey) {
@@ -52,7 +62,7 @@
       data['friendlies'].forEach(function(friendly) {
         if (friendly['type'] == 'Warrior') {
           var el = createWarriorElement(friendly);
-          document.getElementById('warrior-list').appendChild(el);
+          document.getElementById('result-table-body').appendChild(el);
           bosses.forEach(function(boss) {
             counter += 1;
             fetchCombatStats(reportId, friendly['id'], boss, apiKey, function(stats) {
@@ -63,22 +73,30 @@
                 warriors.forEach(function(warrior) {
                   console.log(warrior);
                   if (!damageTotals[warrior[2]]) {
-                    damageTotals[warrior[2]] = [0, 0, 0];
+                    damageTotals[warrior[2]] = [0, 0, 0, 0, 0];
                   }
                   damageTotals[warrior[2]][0] += (warrior[3] || 0);
                   damageTotals[warrior[2]][1] += (warrior[4] || 0);
                   damageTotals[warrior[2]][2] += (warrior[5] || 0);
+                  damageTotals[warrior[2]][3] += (warrior[6] || 0);
+                  damageTotals[warrior[2]][4] += (warrior[7] || 0);
                 });
                 console.log(damageTotals);
                 Object.keys(damageTotals).forEach(function(k) {
-                  var li = document.getElementById('warrior-' + k);
+                  var tr = document.getElementById('warrior-' + k);
                   var totals = damageTotals[k];
                   var damageDone = totals[0];
+                  var td = document.createElement('td');
+                  td.appendChild(document.createTextNode(formatNumber(damageDone)));
+                  tr.appendChild(td);
                   var missRate = totals[1]/totals[2];
-                  li.appendChild(document.createTextNode(
-                      ' damage: ' + formatNumber(damageDone)
-                      + ' miss rate: ' + (missRate*100).toPrecision(3)
-                  ));
+                  var td = document.createElement('td');
+                  td.appendChild(document.createTextNode((missRate*100).toPrecision(3)));
+                  tr.appendChild(td);
+                  var critRate = totals[3]/totals[4];
+                  var td = document.createElement('td');
+                  td.appendChild(document.createTextNode((critRate*100).toPrecision(3)));
+                  tr.appendChild(td);
                 });
               }
             });
@@ -112,6 +130,15 @@
     if (total < 1) { return 0; }
     return [misses, total];
   }
+  function critPercent(entries) {
+    var crits = 0;
+    var total = 0;
+    entries.forEach(function(entry) {
+      total += entry['hitCount'] + entry['missCount'];
+      crits += entry['critHitCount'];
+    });
+    return [crits, total];
+  }
   function fetchCombatStats(reportId, sourceId, targetName, apiKey, fn) {
     var url = 'https://classic.warcraftlogs.com:443/v1/report/tables/damage-done/'
     + reportId + '?end=1000000000000&sourceid=' + sourceId
@@ -122,7 +149,9 @@
     }).then(function(json) {
       var total = totalDamage(json['entries']);
       var miss = missPercent(json['entries']);
-      return [targetName, sourceId, total].concat(miss);
+      var crit = critPercent(json['entries']);
+      var result = [targetName, sourceId, total].concat(miss).concat(crit);
+      return result;
     }).then(fn).catch(function(error) {
       console.log(error);
     });
