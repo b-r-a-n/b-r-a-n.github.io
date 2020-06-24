@@ -282,7 +282,7 @@
   }
   function getReport(reportId, apiKey) {
     const result = new Promise((resolve, reject) => {
-      var report = null;//localStorage.getObject(reportId);
+      var report = localStorage.getObject(reportId);
       if (!report) {
         console.log('Fetching remote report');
         fetchReport(reportId, apiKey).then(report => {
@@ -325,10 +325,8 @@
         };
       }
       if (row.type == 'buffs') {
-        if (row['Recklessness']) {
-          summary[key].diamondFlaskUptime += (row['Diamond Flask'].totalUptime || 0) / (row.totalTime || 1.0);
-        }
         if (row['Diamond Flask']) {
+          summary[key].diamondFlaskUptime += (row['Diamond Flask'].totalUptime || 0) / (row.totalTime || 1.0);
           summary[key].diamondFlaskUses += (row['Diamond Flask'].totalUses || 0);
         }
         if (row['Flurry']) {
