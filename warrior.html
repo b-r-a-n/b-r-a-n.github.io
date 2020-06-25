@@ -58,8 +58,8 @@
       <table id='result-table' class='tablesorter'>
         <thead>
           <tr id='result-header-row'>
-            <th>Player</th><th>Damage</th><th>Melee</th><th>Miss%</th><th>Crit%</th>
-            <th>Parry%</th><th>BTs</th><th>Sunders</th><th>HSs</th>
+            <th>Player</th><th>Damage</th><th>Buff%</th><th>Melee</th><th>Miss%</th><th>Crit%</th>
+            <th>Parry%</th><th>BTs</th><th>WWs</th><th>Sunders</th><th>HSs</th><th>CLs</th>
             <th>Executes</th><th>DF%</th><th>Flurry%</th><th>Windfury%</th><th>Procs</th>
             <th>Crusdaer%</th><th>Reck%</th><th>Blood Fury</th>
           </tr>
@@ -69,7 +69,7 @@
     </article>
   </section>
   <script>
-  APPVERSION = '0.0.3';
+  APPVERSION = '0.0.8';
   Storage.prototype.setObject = function(key, value) {
     this.setItem(key, JSON.stringify(value));
   }
@@ -90,6 +90,9 @@
     td.appendChild(document.createTextNode(formatNumber(summary.totalDamage)));
     tr.appendChild(td);
     var td = document.createElement('td');
+    td.appendChild(document.createTextNode((summary.worldBuffs*100).toPrecision(3)));
+    tr.appendChild(td);
+    var td = document.createElement('td');
     td.appendChild(document.createTextNode(formatNumber(summary.meleeAttempts)));
     tr.appendChild(td);
     var missRate = summary.meleeMisses / summary.meleeAttempts;
@@ -108,10 +111,16 @@
     td.appendChild(document.createTextNode(formatNumber(summary.bloodThirsts)));
     tr.appendChild(td);
     var td = document.createElement('td');
+    td.appendChild(document.createTextNode(formatNumber(summary.whirlwinds)));
+    tr.appendChild(td);
+    var td = document.createElement('td');
     td.appendChild(document.createTextNode(formatNumber(summary.sunders)));
     tr.appendChild(td);
     var td = document.createElement('td');
     td.appendChild(document.createTextNode(formatNumber(summary.heroicStrikes)));
+    tr.appendChild(td);
+    var td = document.createElement('td');
+    td.appendChild(document.createTextNode(formatNumber(summary.cleaves)));
     tr.appendChild(td);
     var td = document.createElement('td');
     td.appendChild(document.createTextNode(formatNumber(summary.executes)));
@@ -213,6 +222,44 @@
     });
     return result;
   }
+  function fetchWorldBuffs(reportId, apiKey, sourceId, fightIds) {
+    const url = 'https://classic.warcraftlogs.com:443/v1/report/events/summary/'
+    + reportId + '?end=10000000000&sourceid=' + sourceId
+    + '&filter=type%3D%22combatantinfo%22'
+    + '&api_key=' + apiKey;
+    const worldBuffs = [
+      //15123, // resist fire
+      16609, // wcb
+      15366, // sf
+      //22818, // moxie
+      22817, // ferocity
+      //22820, // savy
+      24425, // zandalar
+      22888, // dragonslayer
+      //23768 // dmf
+    ];
+    return fetch(url).then(function(response) {
+      return response.json();
+    }).then(function(json) {
+      var buffs = 0;
+      possible = 0;
+      json['events'].forEach(function(event) {
+        if (fightIds.includes(event['fight'])) {
+          possible += worldBuffs.length;
+          event['auras'].forEach(aura => {
+            if (worldBuffs.includes(aura['ability'])) {
+              buffs += 1;
+            }
+          });
+        }
+      });
+      return {
+        'type': 'worldbuffs',
+        'count': buffs,
+        'possible': possible,
+      };
+    });
+  }
   function fetchBuffs(reportId, apiKey, sourceId) {
     var url = 'https://classic.warcraftlogs.com:443/v1/report/tables/buffs/'
     + reportId + '?end=1000000000000&targetid=' + sourceId
@@ -226,6 +273,28 @@
       buffs['sourceId'] = sourceId;
       buffs['totalTime'] = json['totalTime'];
       return buffs;
+    });
+  }
+  function fetchFightIds(reportId, apiKey) {
+    const bwl = [610, 611, 612, 613, 614, 615, 616, 617];
+    const url = 'https://classic.warcraftlogs.com:443/v1/report/fights/'
+    + reportId + '?api_key=' + apiKey;
+    return fetch(url).then(function(response) {
+      return response.json();
+    }).then(function(json) {
+      var bossFights = [];
+      if (!json['error']) {
+        json['fights'].forEach(function(fight) {
+          if (fight['boss'] > 0 && bwl.includes(fight['boss'])) {
+            if (fight['partial'] == 2) {
+              bossFights.push(fight['id']-1);
+            } else {
+              bossFights.push(fight['id']);
+            }
+          }
+        });
+      }
+      return bossFights;
     });
   }
   function fetchCasts(reportId, apiKey, sourceId) {
@@ -284,28 +353,34 @@
     });
   }
   function fetchReport(reportId, apiKey) {
-    return fetchWarriors(reportId, apiKey).then(warriors => {
-      var requests = [];
-      warriors.forEach(warrior => {
-        console.log(warrior);
-        const bfs = fetchBuffs(reportId, apiKey, warrior['id']).then(v => {
-          v['sourceName'] = warrior['name'];
-          return v;
+    return fetchFightIds(reportId, apiKey).then(fightIds => {
+      return fetchWarriors(reportId, apiKey).then(warriors => {
+        var requests = [];
+        warriors.forEach(warrior => {
+          const wb = fetchWorldBuffs(reportId, apiKey, warrior['id'], fightIds).then(v => {
+            v['sourceName'] = warrior['name'];
+            return v;
+          });
+          requests.push(wb);
+          const bfs = fetchBuffs(reportId, apiKey, warrior['id']).then(v => {
+            v['sourceName'] = warrior['name'];
+            return v;
+          });
+          requests.push(bfs);
+          const dmg = fetchDamageDone(reportId, apiKey, warrior['id']).then(v => {
+            v['sourceName'] = warrior['name'];
+            return v;
+          });
+          requests.push(dmg);
+          const cst = fetchCasts(reportId, apiKey, warrior['id']).then(v => {
+            v['sourceName'] = warrior['name'];
+            return v;
+          });
+          requests.push(cst);
         });
-        requests.push(bfs);
-        const dmg = fetchDamageDone(reportId, apiKey, warrior['id']).then(v => {
-          v['sourceName'] = warrior['name'];
-          return v;
+        return Promise.all(requests).then(values => {
+          return values;
         });
-        requests.push(dmg);
-        const cst = fetchCasts(reportId, apiKey, warrior['id']).then(v => {
-          v['sourceName'] = warrior['name'];
-          return v;
-        });
-        requests.push(cst);
-      });
-      return Promise.all(requests).then(values => {
-        return values;
       });
     });
   }
@@ -351,6 +426,9 @@
           'crusaderUptime': 0,
           'recklessnessUptime': 0,
           'bloodFuries': 0,
+          'cleaves': 0,
+          'whirlwinds': 0,
+          'worldBuffs': 0,
         };
       }
       if (row.type == 'buffs') {
@@ -375,6 +453,8 @@
         if (row['Blood Fury']) {
           summary[key].bloodfuryUptime += (row['Blood Fury'].totalUptime || 0) / (row.totalTime || 1.0);
         }
+      } else if (row.type == 'worldbuffs') {
+        summary[key].worldBuffs = (row.count/ row.possible);
       } else {
         summary[key].totalDamage += (row.totalDamage || 0);
         summary[key].meleeMisses += (row.meleeMisses || 0);
@@ -384,8 +464,10 @@
         summary[key].critHits += (row.critHits || 0);
         summary[key].sunders += (row['Sunder Armor'] || 0);
         summary[key].bloodThirsts += (row['Bloodthirst'] || 0);
+        summary[key].whirlwinds += (row['Whirlwind'] || 0);
         summary[key].executes += (row['executes'] || 0);
         summary[key].heroicStrikes += (row['Heroic Strike'] || 0);
+        summary[key].cleaves += (row['Cleave'] || 0);
         summary[key].bloodFuries += (row['Blood Fury'] || 0);
       }
     });
