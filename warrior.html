@@ -69,7 +69,7 @@
     </article>
   </section>
   <script>
-  APPVERSION = '0.0.8';
+  APPVERSION = '0.0.9';
   Storage.prototype.setObject = function(key, value) {
     this.setItem(key, JSON.stringify(value));
   }
@@ -242,7 +242,7 @@
       return response.json();
     }).then(function(json) {
       var buffs = 0;
-      possible = 0;
+      var possible = 0;
       json['events'].forEach(function(event) {
         if (fightIds.includes(event['fight'])) {
           possible += worldBuffs.length;
@@ -271,21 +271,22 @@
       var buffs = buffUptimes(json);
       buffs['type'] = 'buffs';
       buffs['sourceId'] = sourceId;
-      buffs['totalTime'] = json['totalTime'];
       return buffs;
     });
   }
   function fetchFightIds(reportId, apiKey) {
-    const bwl = [610, 611, 612, 613, 614, 615, 616, 617];
+    const bwl = [610, 611, 612, 613, 614, 615, 616, 617, 631];
     const url = 'https://classic.warcraftlogs.com:443/v1/report/fights/'
     + reportId + '?api_key=' + apiKey;
     return fetch(url).then(function(response) {
       return response.json();
     }).then(function(json) {
       var bossFights = [];
+      var totalTime = 0;
       if (!json['error']) {
         json['fights'].forEach(function(fight) {
           if (fight['boss'] > 0 && bwl.includes(fight['boss'])) {
+            totalTime += (fight['end_time'] - fight['start_time']);
             if (fight['partial'] == 2) {
               bossFights.push(fight['id']-1);
             } else {
@@ -294,7 +295,9 @@
           }
         });
       }
-      return bossFights;
+      return {
+        'bossFights': bossFights,
+        'totalTime': totalTime};
     });
   }
   function fetchCasts(reportId, apiKey, sourceId) {
@@ -353,17 +356,18 @@
     });
   }
   function fetchReport(reportId, apiKey) {
-    return fetchFightIds(reportId, apiKey).then(fightIds => {
+    return fetchFightIds(reportId, apiKey).then(fightInfo => {
       return fetchWarriors(reportId, apiKey).then(warriors => {
         var requests = [];
         warriors.forEach(warrior => {
-          const wb = fetchWorldBuffs(reportId, apiKey, warrior['id'], fightIds).then(v => {
+          const wb = fetchWorldBuffs(reportId, apiKey, warrior['id'], fightInfo.bossFights).then(v => {
             v['sourceName'] = warrior['name'];
             return v;
           });
           requests.push(wb);
           const bfs = fetchBuffs(reportId, apiKey, warrior['id']).then(v => {
             v['sourceName'] = warrior['name'];
+            v['totalTime'] = fightInfo.totalTime;
             return v;
           });
           requests.push(bfs);
