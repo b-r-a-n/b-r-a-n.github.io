@@ -29,10 +29,8 @@
   <br>
   <div id='errormessage'></div>
   <br>
-  <table width="400px" id='reporttable'>
-    <thead><tr id='reporttableheaderrow'></tr></thead>
-    <tbody id='reporttablebody'></tbody>
-  </table>
+  <div id='result-table-body'>
+  </div>
   <ul id='friendlies'></ul>
   <script>
   function fetchWorldBuffs(reportId, sourceId, fightIds, apiKey) {
@@ -82,10 +80,21 @@
         }
       });
     }).catch(function(error) {
-
+      console.log(error);
     });
   }
   function fetchRaidBuffs(reportId, apiKey) {
+    var table = document.createElement('table')
+    table.id = 'reporttable'
+    var header = document.createElement('thead');
+    var headerRow = document.createElement('tr');
+    headerRow.id = 'reporttableheaderrow';
+    header.appendChild(headerRow);
+    table.appendChild(header);
+    var tableBody = document.createElement('tbody');
+    tableBody.id = 'reporttablebody';
+    table.appendChild(tableBody);
+    document.getElementById('result-table-body').appendChild(table);
     const url = 'https://classic.warcraftlogs.com:443/v1/report/fights/'
     + reportId + '?api_key=' + apiKey;
     fetch(url).then(function(response) {
@@ -100,7 +109,20 @@
       document.getElementById('reporttableheaderrow').appendChild(empty);
       var bossFights = [];
       const bwl = [610, 611, 612, 613, 614, 615, 616, 617];
-      bwl.forEach(function(bossId) {
+      const aq = [
+        709, // Skeram
+        710, // Silithid royalty
+        711, // Sartura
+        712, // Fankriss
+        713, // Viscidus
+        714, // Huhuran
+        715, // Twin Emps
+        716, // Ouro
+        717, // C'thun
+      ];
+      var bossIds = bwl.concat(aq);
+      var bossHeaders = {};
+      bossIds.forEach(function(bossId) {
         var img = document.createElement('img');
         img.id = 'boss-' + bossId;
         img.src = 'https://dmszsuqyoe6y6.cloudfront.net/img/warcraft/bosses/' + bossId +'-icon.jpg';
@@ -108,15 +130,17 @@
         img.height = 48;
         var header = document.createElement('th');
         header.appendChild(img);
-        document.getElementById('reporttableheaderrow').appendChild(header);
+        bossHeaders[bossId] = header;
       });
       json['fights'].forEach(function(fight) {
-        if (fight['boss'] > 0 && bwl.includes(fight['boss'])) {
+        if (fight['boss'] > 0 && bossIds.includes(fight['boss'])) {
           if (fight['partial'] == 2) {
             bossFights.push(fight['id']-1);
           } else {
             bossFights.push(fight['id']);
           }
+          header = bossHeaders[fight['boss']]
+          document.getElementById('reporttableheaderrow').appendChild(header);
           var el = document.getElementById('boss-' + fight['boss']);
           el.title = fight['name'];
         }
@@ -145,6 +169,7 @@
     });
   }
   function update() {
+    document.getElementById('result-table-body').removeAllChildren();
     const reportId = document.getElementById('reportid').value;
     const apiKey = document.getElementById('apikey').value;
     fetchRaidBuffs(reportId, apiKey);
