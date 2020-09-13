@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script type='text/javascript' src='items.js'></script>
+</head>
+  <body>
+    <form id='parse'>
+      <textarea id='input' rows="10" cols="80">Paste the RC Loot Council export here ...</textarea>
+      <br />
+      <input type="submit" value="Submit">
+    </form>
+    <textarea id='output' rows="10" cols="80">Copy results from here ...</textarea>
+    <script>
+      var ITEMS = {};
+      var EXCEPTIONS = {
+        20926: function(item, cls) {
+          if (cls == 'WARRIOR') return item + ' ' + '(Wa, Sun)';
+          if (cls == 'WARLOCK') return item + ' ' + '(Wl)';
+          if (cls == 'MAGE') return item + ' ' + '(Ma)';
+          if (cls == 'PRIEST') return item + ' ' + '(Pr)';
+          return item;
+        }
+      };
+      function getItemName(itemID) {
+        return ITEMS[itemID];
+      }
+      function parse(event) {
+        // clear results text area
+        // get data from input
+        const text = document.getElementById('input').value;
+        var json = null;
+        try {
+          json = JSON.parse(text);
+        } catch(e) {
+          console.log(e);
+          return false;
+        }
+        var output = "";
+        json.forEach(row => {
+          if (row.response != 'Disenchant') {
+            var name = row.player.split("-")[0];
+            var cls = row.class;
+            var d = new Date(row.date);
+            var item = getItemName(row.itemID);
+            if (EXCEPTIONS[row.itemID]) {
+              item = EXCEPTIONS[row.itemID](item, cls)
+            }
+            output += name + "\t" + item + "\t" + (1900 + d.getYear()) + '-' + (d.getMonth()+1) + '-' + d.getDate() + "\n";
+          }
+        });
+        document.getElementById('output').value = output;
+        return false;
+      }
+      function init() {
+        items.split("\n").forEach(item => {
+          const itemID = item.split(",")[0];
+          var itemName = item.substring(item.indexOf(",") + 1).replaceAll('"', '');
+          ITEMS[itemID] = itemName;
+        });
+        document.getElementById('parse').onsubmit = parse;
+      }
+      window.onload = init;
+    </script>
+  </body>
+</html>
