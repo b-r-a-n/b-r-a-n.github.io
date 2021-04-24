@@ -1,0 +1,233 @@
+<html>
+<head>
+<style>
+body {
+  background-image: url('4hm.png');
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: 1227px 1284px;
+}
+.healer {
+	background-color: blue;
+	color: white;
+	border: 2px solid white;
+	margin: 20px;
+	padding: 20px;
+	position: absolute;
+}
+.melee {
+	background-color: brown;
+	color: white;
+	border: 2px solid white;
+	margin: 20px;
+	padding: 20px;
+	position: absolute;
+}
+</style>
+<script>
+const SPEED_FACTOR = 6;
+
+var txy = {x: 900, y: 900};
+var thane = trans(txy);
+
+var tmxy = {x: txy.x + 100, y: txy.y + 100};
+var thaneMelee = trans(tmxy);
+
+var mxy = {x: 300, y: 900};
+var mograine = trans(mxy);
+
+var mmxy = {x: mxy.x - 100, y: mxy.y + 100};
+var mograineMelee = trans(mmxy);
+
+var zxy = {x: 900, y: 300};
+var zeliak = trans(zxy);
+
+var bxy = {x: 300, y: 300};
+var blamo = trans(bxy);
+
+var cxy = {x: 600, y: 500};
+var center = trans(cxy);
+
+var exy = {x: 600, y: 1150};
+var entrance = trans(exy);
+
+var half = 'translateX(300px) translateY(600px)';
+
+var bottomLeft = 'translateX(20px) translateY(1200px)';
+
+function dist(m, n) {
+	return Math.sqrt((m.x - n.x) * (m.x - n.x) + (m.y - n.y) * (m.y - n.y));
+}
+
+function trans(m) {
+  return `translateX(${m.x}px) translateY(${m.y}px)`;
+}
+
+function resetTransforms() {
+	document.getElementById("buttons").style.transform = bottomLeft;
+}
+
+function animateAll() {
+	console.log("Running all");
+	animateMark(0, function() {
+	animateMark(1, function() {
+	animateMark(2, function() { 
+	animateMark(3, function() { 
+	animateMark(4, function() {}); }); }); }); });
+}
+
+
+
+function animateMark(mark, callback) {
+	var vile = document.getElementById("vile");
+	var flop = document.getElementById("flop");
+	var macyo = document.getElementById("macyo");
+	var melee = document.getElementById("melee");
+	var cyborg = document.getElementById("cyborg");
+	var arejay = document.getElementById("arejay");
+	if (mark == 0) {
+		vile.style.transform = entrance;
+		flop.style.transform = entrance;
+		macyo.style.transform = entrance;
+		melee.style.transform = entrance;
+		cyborg.style.transform = entrance;
+		arejay.style.transform = entrance;
+		vile.animate([
+			{transform: entrance},
+			{transform: center},
+		], {
+			duration: dist(exy, cxy)*SPEED_FACTOR,
+			iterations: 1,
+		}).onfinish = function() { vile.style.transform = center; };
+		
+		flop.animate([
+			{transform: entrance},
+			{transform: blamo},
+		], {
+			duration: dist(exy, bxy)*SPEED_FACTOR,
+			iterations: 1,
+		}).onfinish = function() { flop.style.transform = blamo; };
+		
+		macyo.animate([
+			{transform: entrance},
+			{transform: mograine},
+		], {
+			duration: dist(exy, mxy)*SPEED_FACTOR,
+			iterations: 1,
+		}).onfinish = function() { macyo.style.transform = mograine; };
+		
+		cyborg.animate([
+			{transform: entrance},
+			{transform: zeliak},
+		], {
+			duration: dist(exy, zxy)*SPEED_FACTOR,
+			iterations: 1,
+		}).onfinish = function() { cyborg.style.transform = zeliak; callback(); };
+		
+		arejay.animate([
+			{transform: entrance},
+			{transform: thane},
+		], {
+			duration: dist(exy, txy)*SPEED_FACTOR,
+			iterations: 1,
+		}).onfinish = function() { arejay.style.transform = thane; };	
+		
+		melee.animate([
+			{transform: entrance},
+			{transform: thaneMelee},
+		], {
+			duration: dist(exy, tmxy)*SPEED_FACTOR,
+			iterations: 1,
+		}).onfinish = function() { melee.style.transform = thaneMelee; };	
+		
+	}
+	
+	if (mark == 1) {
+		callback();
+	}
+		
+	if (mark == 2) {
+		vile.style.transform = center;
+		flop.style.transform = blamo;
+		macyo.style.transform = mograine;
+		melee.style.transform = thaneMelee;
+		cyborg.style.transform = zeliak;
+		arejay.style.transform = thane;
+		vile.animate([
+			{transform: center},
+			{transform: blamo},
+		], {
+			duration: dist(cxy, bxy)*SPEED_FACTOR,
+			iterations: 1,
+		}).onfinish = function(){ vile.style.transform = blamo; };
+		
+		flop.animate([
+			{transform: blamo},
+			{transform: mograine},
+		], {
+			delay: dist(cxy, bxy)*SPEED_FACTOR,
+			duration: dist(bxy, mxy)*SPEED_FACTOR,
+			iterations: 1,
+		}).onfinish = function() { flop.style.transform = half; callback(); };
+	}
+	
+	if (mark == 3) {
+		vile.style.transform = blamo;
+		flop.style.transform = mograine;
+		macyo.style.transform = mograine;
+		melee.style.transform = thaneMelee;
+		cyborg.style.transform = zeliak;
+		arejay.style.transform = thane;
+		macyo.animate([
+			{transform: mograine},
+			{transform: center},
+		], {
+			duration: dist(mxy, cxy)*SPEED_FACTOR,
+			iterations:1,
+		}).onfinish = function() { macyo.style.transform = zeliak;  callback(); };
+		
+		melee.animate([
+			{transform: thaneMelee},
+			{transform: mograineMelee},
+		], {
+			delay: 2000,
+			duration: dist(tmxy, mmxy)*SPEED_FACTOR,
+			iterations:1,
+		}).onfinish = function() { melee.style.transform = mograineMelee; };
+	}
+	
+	if (mark == 4) {
+		vile.style.transform = blamo;
+		flop.style.transform = mograine;
+		macyo.style.transform = center;
+		melee.style.transform = thaneMelee;
+		cyborg.style.transform = zeliak;
+		arejay.style.transform = thane;
+		macyo.animate([
+			{transform: center},
+			{transform: zeliak},
+		], {
+			duration: dist(cxy, zxy)*SPEED_FACTOR,
+			iterations:1,
+		}).onfinish = function() { macyo.style.transform = zeliak; callback(); };
+		
+	}
+};
+</script>
+</head>
+<body onload="resetTransforms()">
+<div class="melee" id="melee">Melee</div>
+<div class="healer" id="flop">Flop</div>
+<div class="healer" id="vile">Vile</div>
+<div class="healer" id="macyo">Macyo<br \>Disco</div>
+<div class="healer" id="arejay">Arejay<br \>Deetay<br \>Exelark<br \>Blazicus<br \>Matuu</div>
+<div class="healer" id="cyborg">Cyborg<br \>Trist<br \>Livewire</div>
+<div id="buttons">
+<button onclick="animateMark(1, function() {})">Mark 1</button>
+<button onclick="animateMark(2, function() {})">Mark 2</button>
+<button onclick="animateMark(3, function() {})">Mark 3</button>
+<button onclick="animateMark(4, function() {})">Mark 4</button>
+<button onclick="animateAll()">All</button>
+</div>
+</body>
+</html>
