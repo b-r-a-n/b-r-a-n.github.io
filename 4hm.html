@@ -168,7 +168,7 @@ function animateMark(mark, callback) {
 			delay: dist(cxy, bxy)*SPEED_FACTOR,
 			duration: dist(bxy, mxy)*SPEED_FACTOR,
 			iterations: 1,
-		}).onfinish = function() { flop.style.transform = half; callback(); };
+		}).onfinish = function() { flop.style.transform = mograine; callback(); };
 	}
 	
 	if (mark == 3) {
@@ -184,7 +184,7 @@ function animateMark(mark, callback) {
 		], {
 			duration: dist(mxy, cxy)*SPEED_FACTOR,
 			iterations:1,
-		}).onfinish = function() { macyo.style.transform = zeliak;  callback(); };
+		}).onfinish = function() { macyo.style.transform = center;  callback(); };
 		
 		melee.animate([
 			{transform: thaneMelee},
@@ -200,7 +200,7 @@ function animateMark(mark, callback) {
 		vile.style.transform = blamo;
 		flop.style.transform = mograine;
 		macyo.style.transform = center;
-		melee.style.transform = thaneMelee;
+		melee.style.transform = mograineMelee;
 		cyborg.style.transform = zeliak;
 		arejay.style.transform = thane;
 		macyo.animate([
@@ -222,8 +222,9 @@ function animateMark(mark, callback) {
 <div class="healer" id="macyo">Macyo<br \>Disco</div>
 <div class="healer" id="arejay">Arejay<br \>Deetay<br \>Exelark<br \>Blazicus<br \>Matuu</div>
 <div class="healer" id="cyborg">Cyborg<br \>Trist<br \>Livewire</div>
+<div class="progress" id="mark"></div>
 <div id="buttons">
-<button onclick="animateMark(1, function() {})">Mark 1</button>
+<button onclick="animateMark(0, function() {})">Mark 1</button>
 <button onclick="animateMark(2, function() {})">Mark 2</button>
 <button onclick="animateMark(3, function() {})">Mark 3</button>
 <button onclick="animateMark(4, function() {})">Mark 4</button>
