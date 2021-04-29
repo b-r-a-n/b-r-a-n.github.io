@@ -23,6 +23,12 @@ body {
 	padding: 20px;
 	position: absolute;
 }
+.box {
+	position: absolute;
+	width: 64px;
+	height: 32px;
+	background-color: teal;
+}
 </style>
 <script>
 const SPEED_FACTOR = 6;
@@ -194,6 +200,15 @@ function animateMark(mark, callback) {
 			duration: dist(tmxy, mmxy)*SPEED_FACTOR,
 			iterations:1,
 		}).onfinish = function() { melee.style.transform = mograineMelee; };
+		
+		arejay.animate([
+			{transform: thane},
+			{transform: mograine},
+		], {
+			delay: 2000,
+			duration: dist(txy, mxy)*SPEED_FACTOR,
+			iterations:1,
+		}).onfinish = function() { arejay.style.transform = mograine; };
 	}
 	
 	if (mark == 4) {
@@ -202,15 +217,30 @@ function animateMark(mark, callback) {
 		macyo.style.transform = center;
 		melee.style.transform = mograineMelee;
 		cyborg.style.transform = zeliak;
-		arejay.style.transform = thane;
+		arejay.style.transform = mograine;
 		macyo.animate([
 			{transform: center},
 			{transform: zeliak},
 		], {
 			duration: dist(cxy, zxy)*SPEED_FACTOR,
 			iterations:1,
-		}).onfinish = function() { macyo.style.transform = zeliak; callback(); };
-		
+		}).onfinish = function() { macyo.style.transform = zeliak; };
+		cyborg.animate([
+			{transform: zeliak},
+			{transform: blamo},
+		], {
+			delay: dist(cxy, zxy)*SPEED_FACTOR,
+			duration: dist(zxy, bxy)*SPEED_FACTOR,
+			iterations:1,
+		}).onfinish = function() { cyborg.style.transform = blamo; callback(); };
+		vile.animate([
+			{transform: blamo},
+			{transform: zeliak},
+		], {
+			delay: dist(cxy, zxy)*SPEED_FACTOR + dist(zxy, bxy)*SPEED_FACTOR,
+			duration: dist(bxy, zxy)*SPEED_FACTOR,
+			iterations:1,
+		}).onfinish = function() { vile.style.transform = zeliak; callback(); };
 	}
 };
 </script>
@@ -222,6 +252,7 @@ function animateMark(mark, callback) {
 <div class="healer" id="macyo">Macyo<br \>Disco</div>
 <div class="healer" id="arejay">Arejay<br \>Deetay<br \>Exelark<br \>Blazicus<br \>Matuu</div>
 <div class="healer" id="cyborg">Cyborg<br \>Trist<br \>Livewire</div>
+<div class="box" id="box1"></div>
 <div class="progress" id="mark"></div>
 <div id="buttons">
 <button onclick="animateMark(0, function() {})">Mark 1</button>
