@@ -7,6 +7,28 @@ body {
   background-attachment: fixed;
   background-size: 1227px 1284px;
 }
+#progress {
+	background-color: green;
+	color: white;
+	position: absolute;
+	bottom: 10px;
+	left: 13px;
+	height: 32px;
+	width: 1200px;
+	border: 2px solid white;
+}
+#indicator {
+	background-color: white;
+	position: absolute;
+	left:0px;
+	height: 36px;
+	width: 4px;
+}
+#buttons {
+	position: absolute;
+	bottom: 52px;
+	left: 13px;
+}
 .healer {
 	background-color: blue;
 	color: white;
@@ -14,6 +36,7 @@ body {
 	margin: 20px;
 	padding: 20px;
 	position: absolute;
+	width: 64px;
 }
 .melee {
 	background-color: brown;
@@ -22,16 +45,57 @@ body {
 	margin: 20px;
 	padding: 20px;
 	position: absolute;
-}
-.box {
-	position: absolute;
 	width: 64px;
-	height: 32px;
-	background-color: teal;
+}
+.thane {
+	width: 24px;
+	height: 24px;
+	color: white;
+	position: absolute;
+	right: 4px;
+	bottom: -12px;
+	text-align: center;
+	background-image: url("thane.jpg");
+	background-size: cover;
+}
+.mograine {
+	width: 24px;
+	height: 24px;
+	color: white;
+	position: absolute;
+	left: 4px;
+	bottom: -12px;
+	text-align: center;
+	background-image: url("mograine.jpg");
+	background-size: cover;
+}
+.blamo {
+	width: 24px;
+	height: 24px;
+	color: white;
+	position: absolute;
+	left: 4px;
+	top: -12px;
+	text-align: center;
+	background-image: url("blamo.jpg");
+	background-size: cover;
+}
+.zeliak {
+	width: 24px;
+	height: 24px;
+	color: white;
+	position: absolute;
+	right: 4px;
+	top: -12px;
+	text-align: center;
+	background-image: url("zeliak.jpg");
+	background-size: cover;
 }
 </style>
 <script>
 const SPEED_FACTOR = 6;
+const MARK_DURATION = 13;
+const PLAYBACK_SPEED = 1;
 
 var txy = {x: 900, y: 900};
 var thane = trans(txy);
@@ -61,6 +125,8 @@ var half = 'translateX(300px) translateY(600px)';
 
 var bottomLeft = 'translateX(20px) translateY(1200px)';
 
+var mark1 = 'translateX(240px)';
+
 function dist(m, n) {
 	return Math.sqrt((m.x - n.x) * (m.x - n.x) + (m.y - n.y) * (m.y - n.y));
 }
@@ -69,20 +135,35 @@ function trans(m) {
   return `translateX(${m.x}px) translateY(${m.y}px)`;
 }
 
-function resetTransforms() {
-	document.getElementById("buttons").style.transform = bottomLeft;
-}
-
 function animateAll() {
-	console.log("Running all");
+	var button = document.getElementById("all_button");
+	button.disabled = true;
 	animateMark(0, function() {
 	animateMark(1, function() {
 	animateMark(2, function() { 
 	animateMark(3, function() { 
-	animateMark(4, function() {}); }); }); }); });
+	animateMark(4, function() {
+		button.disabled = false;
+	}); }); }); }); });
 }
 
-
+function animate_start(callback) {
+	var vile = document.getElementById("vile");
+	var flop = document.getElementById("flop");
+	var macyo = document.getElementById("macyo");
+	var melee = document.getElementById("melee");
+	var cyborg = document.getElementById("cyborg");
+	var arejay = document.getElementById("arejay");
+	var indicator = document.getElementById("indicator");
+	vile.style.transform = entrance;
+	flop.style.transform = entrance;
+	macyo.style.transform = entrance;
+	melee.style.transform = entrance;
+	cyborg.style.transform = entrance;
+	arejay.style.transform = entrance;
+	var anims = [];
+	return anims;
+}
 
 function animateMark(mark, callback) {
 	var vile = document.getElementById("vile");
@@ -91,6 +172,7 @@ function animateMark(mark, callback) {
 	var melee = document.getElementById("melee");
 	var cyborg = document.getElementById("cyborg");
 	var arejay = document.getElementById("arejay");
+	var progress = document.getElementById("progress");
 	if (mark == 0) {
 		vile.style.transform = entrance;
 		flop.style.transform = entrance;
@@ -149,10 +231,12 @@ function animateMark(mark, callback) {
 	}
 	
 	if (mark == 1) {
+		progress.innerText = "Mark 1";
 		callback();
 	}
 		
 	if (mark == 2) {
+		progress.innerText = "Mark 2";
 		vile.style.transform = center;
 		flop.style.transform = blamo;
 		macyo.style.transform = mograine;
@@ -178,6 +262,7 @@ function animateMark(mark, callback) {
 	}
 	
 	if (mark == 3) {
+		progress.innerText = "Mark 3";
 		vile.style.transform = blamo;
 		flop.style.transform = mograine;
 		macyo.style.transform = mograine;
@@ -209,9 +294,18 @@ function animateMark(mark, callback) {
 			duration: dist(txy, mxy)*SPEED_FACTOR,
 			iterations:1,
 		}).onfinish = function() { arejay.style.transform = mograine; };
+		flop.animate([
+			{transform: mograine},
+			{transform: center},
+		], {
+			delay: 2000 + dist(txy, mxy)*SPEED_FACTOR,
+			duration: dist(mxy, cxy)*SPEED_FACTOR,
+			iterations:1,
+		}).onfinish = function() { flop.style.transform = center; };
 	}
 	
 	if (mark == 4) {
+		progress.innerText = "Mark 4";
 		vile.style.transform = blamo;
 		flop.style.transform = mograine;
 		macyo.style.transform = center;
@@ -235,31 +329,33 @@ function animateMark(mark, callback) {
 		}).onfinish = function() { cyborg.style.transform = blamo; callback(); };
 		vile.animate([
 			{transform: blamo},
-			{transform: zeliak},
+			{transform: center},
 		], {
 			delay: dist(cxy, zxy)*SPEED_FACTOR + dist(zxy, bxy)*SPEED_FACTOR,
-			duration: dist(bxy, zxy)*SPEED_FACTOR,
+			duration: dist(bxy, cxy)*SPEED_FACTOR,
 			iterations:1,
-		}).onfinish = function() { vile.style.transform = zeliak; callback(); };
+		}).onfinish = function() { vile.style.transform = center; callback(); };
 	}
 };
 </script>
 </head>
-<body onload="resetTransforms()">
-<div class="melee" id="melee">Melee</div>
-<div class="healer" id="flop">Flop</div>
-<div class="healer" id="vile">Vile</div>
-<div class="healer" id="macyo">Macyo<br \>Disco</div>
-<div class="healer" id="arejay">Arejay<br \>Deetay<br \>Exelark<br \>Blazicus<br \>Matuu</div>
-<div class="healer" id="cyborg">Cyborg<br \>Trist<br \>Livewire</div>
-<div class="box" id="box1"></div>
-<div class="progress" id="mark"></div>
+<body>
+<div class="melee" id="melee">Melee<div class="thane"></div><div class="mograine"></div><div class="blamo"></div><div class="zeliak"></div></div>
+<div class="healer" id="flop">Flop<div class="thane"></div><div class="mograine"></div><div class="blamo"></div><div class="zeliak"></div></div>
+<div class="healer" id="vile">Vile<div class="thane"></div><div class="mograine"></div><div class="blamo"></div><div class="zeliak"></div></div>
+<div class="healer" id="macyo">Macyo<br \>Disco<div class="thane"></div><div class="mograine"></div><div class="blamo"></div><div class="zeliak"></div></div>
+<div class="healer" id="arejay">Arejay<br \>Deetay<br \>Exelark<br \>Blazicus<br \>Matuu<div class="thane"></div><div class="mograine"></div><div class="blamo"></div><div class="zeliak"></div></div>
+<div class="healer" id="cyborg">Cyborg<br \>Trist<br \>Livewire<div class="thane"></div><div class="mograine"></div><div class="blamo"></div><div class="zeliak"></div></div>
 <div id="buttons">
+<!--
 <button onclick="animateMark(0, function() {})">Mark 1</button>
 <button onclick="animateMark(2, function() {})">Mark 2</button>
 <button onclick="animateMark(3, function() {})">Mark 3</button>
 <button onclick="animateMark(4, function() {})">Mark 4</button>
-<button onclick="animateAll()">All</button>
+-->
+<button id="all_button" onclick="animateAll()">All</button>
 </div>
+<div id="progress"></div>
+<div id="indicator"></div>
 </body>
 </html>
